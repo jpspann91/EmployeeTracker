@@ -7,12 +7,12 @@ CREATE TABLE department_tbl (
     department_name VARCHAR(30) NOT NULL
 );
 
-CREATE TABLE role_tbl (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE role_tbl (id INTEGER PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(30) NOT NULL,
     salary DECIMAL(10, 2) NOT NULL,
     department_id INTEGER
-);
+    -- FOREIGN KEY department_id REFERENCES department_tbl(id)
+    );
 
 CREATE TABLE employee_tbl(
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
