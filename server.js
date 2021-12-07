@@ -127,6 +127,30 @@ const promptUser = () => {
 // }
 
 //VIEW SECTION HERE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//View All Departments method
+const viewAllDepartments = () => {
+    console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
+    console.log(`                              ` + chalk.green.bold(`All Departments:`));
+    console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
+    //SQL Statement
+    const sqlStatement = `SELECT department_tbl.id AS id, department_tbl.department_name AS department FROM department_tbl`
+    //Connection to SQL
+    connection.query(sqlStatement, (err, response) => {
+        if (err) throw err;
+
+        if (response.length === 0) {
+            console.log(chalk.red.bold('There are no departments yet, please add one first'))
+            promptUser();
+        } else {
+            
+            console.table(response);
+            console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
+            promptUser();
+        }
+
+    })
+}
 //View All Employees method
 const viewAllEmployees = () => {
     //SQL Statement to grab employee first and last name, role title department and salary
@@ -182,29 +206,23 @@ const viewRoles = () => {
 
     })
 }
-//View All Departments method
-const viewAllDepartments = () => {
+//View Department Budgets. Adds Salaries together depending on department
+const viewDepartmentBudgets = () => {
     console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-    console.log(`                              ` + chalk.green.bold(`All Departments:`));
+    console.log(`                              ` + chalk.green.bold(`Budget By Department:`));
     console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-    //SQL Statement
-    const sqlStatement = `SELECT department_tbl.id AS id, department_tbl.department_name AS department FROM department_tbl`
-    //Connection to SQL
+    const sqlStatement = `SELECT department_id AS id,
+                            department_tbl.department_name AS department,
+                            SUM(salary) AS budget
+                            FROM role_tbl
+                            INNER JOIN department_tbl ON  role_tbl.department_id = department_tbl.id GROUP BY role_tbl.department_id`;
     connection.query(sqlStatement, (err, response) => {
         if (err) throw err;
-
-        if (response.length === 0) {
-            console.log(chalk.red.bold('There are no departments yet, please add one first'))
-            promptUser();
-        } else {
-            
-            console.table(response);
-            console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-            promptUser();
-        }
-
-    })
-}
+        console.table(response);
+        console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
+        promptUser();
+    });
+};
 //View All EMployees by Department
 const viewEmployeesByDepartment = () => {
     const sqlStatement = `SELECT employee_tbl.first_name,
@@ -218,23 +236,6 @@ const viewEmployeesByDepartment = () => {
         console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
         console.log(`                              ` + chalk.green.bold(`Employee Departments:`));
         console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-        console.table(response);
-        console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-        promptUser();
-    });
-};
-//View Department Budgets. Adds Salaries together depending on department
-const viewDepartmentBudgets = () => {
-    console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-    console.log(`                              ` + chalk.green.bold(`Budget By Department:`));
-    console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-    const sqlStatement = `SELECT department_id AS id,
-                            department_tbl.department_name AS department,
-                            SUM(salary) AS budget
-                            FROM role_tbl
-                            INNER JOIN department_tbl ON  role_tbl.department_id = department_tbl.id GROUP BY role_tbl.department_id`;
-    connection.query(sqlStatement, (err, response) => {
-        if (err) throw err;
         console.table(response);
         console.log(chalk.yellow.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
         promptUser();
@@ -361,6 +362,31 @@ const addAnEmployee = () => {
             });
         });
 };
+//ADD Department Method
+const addDepartment = () => {
+
+    const addDeptPrompt = [
+        {
+            name: 'newDepartment',
+            type: 'input',
+            message: 'What is the name of your new Department?',
+            validate: validator.validateString
+        }
+    ]
+    //Prompt user input 
+    inquirer.prompt(addDeptPrompt)
+        .then((answer) => {
+            //Insert into the department table the users passed in value
+            let sqlStatement = `INSERT INTO department_tbl (department_name) VALUES(?)`;
+            connection.query(sqlStatement, answer.newDepartment, (err, response) => {
+                if (err) throw err;
+                console.log("");
+                console.log(chalk.greenBright(answer.newDepartment + ` Department successfully created!`));
+                console.log("");
+                viewAllDepartments();
+            });
+        });
+};
 //Add new Role method
 const addRole = () => {
     //Grabbing department data for adding the role
@@ -437,31 +463,6 @@ const addRole = () => {
                 });
         };
     });
-};
-//ADD Department Method
-const addDepartment = () => {
-
-    const addDeptPrompt = [
-        {
-            name: 'newDepartment',
-            type: 'input',
-            message: 'What is the name of your new Department?',
-            validate: validator.validateString
-        }
-    ]
-    //Prompt user input 
-    inquirer.prompt(addDeptPrompt)
-        .then((answer) => {
-            //Insert into the department table the users passed in value
-            let sqlStatement = `INSERT INTO department_tbl (department_name) VALUES(?)`;
-            connection.query(sqlStatement, answer.newDepartment, (err, response) => {
-                if (err) throw err;
-                console.log("");
-                console.log(chalk.greenBright(answer.newDepartment + ` Department successfully created!`));
-                console.log("");
-                viewAllDepartments();
-            });
-        });
 };
 
 //UPDATE SECTION STARTS HERE~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -657,52 +658,7 @@ const removeAnEmployee = () => {
             });
     });
 };
-//Delete a Role method
-const removeRole = () => {
-    let sqlStatement = "SELECT role_tbl.id, role_tbl.title FROM role_tbl";
 
-    //Connect to mysql
-    connection.query(sqlStatement, (err, response) => {
-        if (err) throw err;
-        //Array to hold all roles
-        let rolesArray = [];
-        //For each role return from the sql statement push the name of it to the roles array
-        response.forEach((role) => { rolesArray.push(role.title); });
-
-        //Remove role prompt
-        const removeRolePrompt = [
-            {
-                name: 'chosenRole',
-                type: 'list',
-                message: 'Which role would you like to remove?',
-                choices: rolesArray
-            }
-        ]
-        //Prompt user
-        inquirer.prompt(removeRolePrompt)
-            .then((answer) => {
-                let roleId;
-
-                //For each role returned from sql statement
-                response.forEach((role) => {
-                    //Check to find a match of the role chosen and grab the id
-                    if (answer.chosenRole === role.title) {
-                        roleId = role.id;
-                    }
-                });
-                //Delete stamenet holds 1 parameter
-                let sqlStatement = `DELETE FROM role_tbl WHERE role_tbl.id = ?`;
-                //Connect to sql pass in chosen role id to delete statament parameter
-                connection.query(sqlStatement, [roleId], (err) => {
-                    if (err) throw err;
-                    console.log(chalk.redBright.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-                    console.log(chalk.greenBright(`Role Successfully Removed`));
-                    console.log(chalk.redBright.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
-                    viewRoles();
-                });
-            });
-    });
-};
 //Remove a Department
 const removeDepartment = () => {
     //Grab department info from tables
@@ -753,6 +709,53 @@ const removeDepartment = () => {
             })
     })
 }
+//Delete a Role method
+const removeRole = () => {
+    let sqlStatement = "SELECT role_tbl.id, role_tbl.title FROM role_tbl";
+
+    //Connect to mysql
+    connection.query(sqlStatement, (err, response) => {
+        if (err) throw err;
+        //Array to hold all roles
+        let rolesArray = [];
+        //For each role return from the sql statement push the name of it to the roles array
+        response.forEach((role) => { rolesArray.push(role.title); });
+
+        //Remove role prompt
+        const removeRolePrompt = [
+            {
+                name: 'chosenRole',
+                type: 'list',
+                message: 'Which role would you like to remove?',
+                choices: rolesArray
+            }
+        ]
+        //Prompt user
+        inquirer.prompt(removeRolePrompt)
+            .then((answer) => {
+                let roleId;
+
+                //For each role returned from sql statement
+                response.forEach((role) => {
+                    //Check to find a match of the role chosen and grab the id
+                    if (answer.chosenRole === role.title) {
+                        roleId = role.id;
+                    }
+                });
+                //Delete stamenet holds 1 parameter
+                let sqlStatement = `DELETE FROM role_tbl WHERE role_tbl.id = ?`;
+                //Connect to sql pass in chosen role id to delete statament parameter
+                connection.query(sqlStatement, [roleId], (err) => {
+                    if (err) throw err;
+                    console.log(chalk.redBright.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
+                    console.log(chalk.greenBright(`Role Successfully Removed`));
+                    console.log(chalk.redBright.bold(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`));
+                    viewRoles();
+                });
+            });
+    });
+};
+
 
 
 
