@@ -21,7 +21,7 @@ Manage a list of EMployees using MySQL and Node.js together. USe command line to
 
 
 ## Installation
-First run `npm install` to get all packages. Then run mysql -u root -p and enter password if needed. Run `source db/schema.sql` to set database correctly. Then run `source db/seed.sql` to seed the table with information to use. 
+First run `npm install` to get all packages. Then run `mysql -u root -p` and enter password if needed. Run `source db/schema.sql` to set database correctly. Then run `source db/seed.sql` to seed the table with information to use. 
 
 ## Usage
 This app will be used to create and manage a database if employees, roles, and departments. Showcases skills of using MySQL with Node.js
